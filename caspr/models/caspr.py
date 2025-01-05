@@ -20,17 +20,18 @@ from utils.transform_utils import sphere_surface_points
 
 
 class CaSPR(nn.Module):
-    def __init__(self, radii_list=[0.02, 0.05, 0.1, 0.2, 0.4, 0.8], # radii to use for pointnet++
-                       local_feat_size=512, # size of per-point features from PointNet++
-                       latent_feat_size=1600, # size of feature from TPointNet++ intermediate features (dynamic + static feature size)
-                       ode_hidden_size=512, # size of dynamics net hidden state for latent ode
-                       motion_feat_size=64, # size of the latent feature to go through ODE (dynamic feature)
-                       pretrain_tnocs=False, # If true, forward pass and loss will only compute TNOCS regression
-                       augment_quad=True, # If true, augments the raw point cloud input with quadratic terms
-                       augment_pairs=True, # if true, augments raw point cloud input with pairwise mult terms
-                       cnf_blocks=1, # number of normalizing flow blocks to use
-                       regress_tnocs=True, # if false, does not regress tnocs or use tnocs loss
-                       ):
+    def __init__(self, radii_list=[0.02, 0.05, 0.1, 0.2, 0.4, 0.8],  # radii to use for pointnet++
+                 local_feat_size=512,  # size of per-point features from PointNet++
+                 latent_feat_size=1600,
+                 # size of feature from TPointNet++ intermediate features (dynamic + static feature size)
+                 ode_hidden_size=512,  # size of dynamics net hidden state for latent ode
+                 motion_feat_size=64,  # size of the latent feature to go through ODE (dynamic feature)
+                 pretrain_tnocs=False,  # If true, forward pass and loss will only compute TNOCS regression
+                 augment_quad=True,  # If true, augments the raw point cloud input with quadratic terms
+                 augment_pairs=True,  # if true, augments raw point cloud input with pairwise mult terms
+                 cnf_blocks=1,  # number of normalizing flow blocks to use
+                 regress_tnocs=True,  # if false, does not regress tnocs or use tnocs loss
+                 ):
         '''
         Main CaSPR architecture.
         '''
@@ -42,15 +43,15 @@ class CaSPR(nn.Module):
         self.motion_feat_size = motion_feat_size
         self.regress_tnocs = regress_tnocs
 
-        self.tnocs_point_size = 4 # by default x,y,z,t
+        self.tnocs_point_size = 4  # by default x,y,z,t
         # Encoder and T-NOCS regression
-        self.encoder = TPointNet2(radii_list, 
-                                    local_feat_size=local_feat_size, 
-                                    out_feat_size=latent_feat_size,
-                                    augment_quad=self.augment_quad,
-                                    augment_pairs=self.augment_pairs,
-                                    tnocs_point_size=self.tnocs_point_size,
-                                    regress_tnocs=self.regress_tnocs)
+        self.encoder = TPointNet2(radii_list,
+                                  local_feat_size=local_feat_size,
+                                  out_feat_size=latent_feat_size,
+                                  augment_quad=self.augment_quad,
+                                  augment_pairs=self.augment_pairs,
+                                  tnocs_point_size=self.tnocs_point_size,
+                                  regress_tnocs=self.regress_tnocs)
 
         if self.pretrain_tnocs:
             # do not need below here if we're pretraining
@@ -60,7 +61,7 @@ class CaSPR(nn.Module):
         ode_input_size = self.motion_feat_size
         self.latent_ode = LatentODE(input_size=ode_input_size,
                                     hidden_size=ode_hidden_size,
-                                    num_layers=2, # num hidden layers
+                                    num_layers=2,  # num hidden layers
                                     nonlinearity=nn.Tanh)
 
         # CNF Decoder
@@ -91,8 +92,8 @@ class CaSPR(nn.Module):
         tnocs_loss = None
         if self.regress_tnocs:
             tnocs_loss = self.encoder.loss(
-                                    tnocs_pred[:,:,:,:self.tnocs_point_size],
-                                    sample_points[:,:,:,:self.tnocs_point_size]) # only want loss on x,y,z,t
+                tnocs_pred[:, :, :, :self.tnocs_point_size],
+                sample_points[:, :, :, :self.tnocs_point_size])  # only want loss on x,y,z,t
 
         if self.pretrain_tnocs:
             # return nocs loss only
@@ -103,15 +104,15 @@ class CaSPR(nn.Module):
         # collect times we need to solve for
         # NOTE: this assumes all batches have the same init time t0
         #       i.e all z0 are for the same timestamp
-        all_times = sample_points[:,:,0,3] # B x T
+        all_times = sample_points[:, :, 0, 3]  # B x T
         # solve the ODE forward in time
-        sample_feats = self.aggregate_and_solve_latent(z0, all_times) # B x T x H
-        sample_feats = sample_feats.view(B*T, ode_feat_dim)
+        sample_feats = self.aggregate_and_solve_latent(z0, all_times)  # B x T x H
+        sample_feats = sample_feats.view(B * T, ode_feat_dim)
         z = sample_feats
 
         # now sample with CNF
-        sample_points = sample_points.view((B*T, N, 4))[:,:,:3].clone() # don't need timestamps
-        init_logprob = torch.zeros(B*T, N, 1).to(sample_points)
+        sample_points = sample_points.view((B * T, N, 4))[:, :, :3].clone()  # don't need timestamps
+        init_logprob = torch.zeros(B * T, N, 1).to(sample_points)
         # run flow
         cnf_result = self.point_cnf(sample_points, z, init_logprob)
         # get loss
@@ -125,7 +126,7 @@ class CaSPR(nn.Module):
         '''
         Compute negative log-likelihood loss for normalizing flow.
         '''
-        batch_size = B*T        
+        batch_size = B * T
         y, delta_log_py = cnf_result_list
         cloud_dim = y.size()[1]
 
@@ -138,7 +139,7 @@ class CaSPR(nn.Module):
         log_px = log_py - delta_log_py
 
         # Loss
-        recon_loss = -log_px # negative log likelihood
+        recon_loss = -log_px  # negative log likelihood
 
         batch_dim = B
         recon_loss = recon_loss.view((batch_dim, T, -1))
@@ -166,15 +167,15 @@ class CaSPR(nn.Module):
         solve_t, time_map = torch.unique(time_tensor, sorted=True, return_inverse=True)
 
         # factorize input feature into static and dynamic feature 
-        z_init = z0[:,:self.latent_ode.input_size]      # dynamic
-        z_global = z0[:,self.latent_ode.input_size:]    # static
+        z_init = z0[:, :self.latent_ode.input_size]  # dynamic
+        z_global = z0[:, self.latent_ode.input_size:]  # static
 
         # solve ODE for necessary times
         pred_z = self.gen_latent(z_init, solve_t)
 
         batch_inds = torch.arange(B).view((-1, 1)).repeat((1, T))
         # map result latent states back to input sampled points
-        sample_feats = pred_z[batch_inds, time_map, :] # B x T x H
+        sample_feats = pred_z[batch_inds, time_map, :]  # B x T x H
 
         B_global, H_global = z_global.size()
         z_global = z_global.unsqueeze(1).expand(B_global, sample_feats.size()[1], H_global)
@@ -201,12 +202,12 @@ class CaSPR(nn.Module):
         '''
         return np.array([count_nfe(self.latent_ode), count_nfe(self.point_cnf)])
 
-    def decode(self, z, 
-                num_points=1024,
-                constant_in_time=False,
-                truncate_std=None,
-                sample_contours=None,
-                ):
+    def decode(self, z,
+               num_points=1024,
+               constant_in_time=False,
+               truncate_std=None,
+               sample_contours=None,
+               ):
         '''
         Given latent vectors at various time steps, samples points on the object surface
 
@@ -225,7 +226,7 @@ class CaSPR(nn.Module):
         '''
         # transform points from the prior to a point cloud, conditioned on a shape code
         B, T, H = z.size()
-        samp_batch = B if constant_in_time else B*T
+        samp_batch = B if constant_in_time else B * T
         input_dim = self.cnf_args.input_dim
         samp_size = (samp_batch, num_points, input_dim)
 
@@ -235,14 +236,14 @@ class CaSPR(nn.Module):
             nsamp_pts = 0
             for radius in radii:
                 if radius == radii[-1]:
-                    cur_npts = samp_batch*(num_points - nsamp_pts)
+                    cur_npts = samp_batch * (num_points - nsamp_pts)
                 else:
-                    cur_npts = samp_batch*(num_points//len(radii))
+                    cur_npts = samp_batch * (num_points // len(radii))
                 rand_surf_points = sphere_surface_points(cur_npts, radius=radius)
                 if radius == radii[-1]:
                     rand_surf_points = rand_surf_points.reshape((samp_batch, num_points - nsamp_pts, 3))
                 else:
-                    rand_surf_points = rand_surf_points.reshape((samp_batch, num_points//len(radii), 3))
+                    rand_surf_points = rand_surf_points.reshape((samp_batch, num_points // len(radii), 3))
                 contours.append(rand_surf_points)
                 nsamp_pts += num_points // len(radii)
             y = np.concatenate(contours, axis=1)
@@ -253,22 +254,22 @@ class CaSPR(nn.Module):
 
         if constant_in_time:
             y = y.view((B, 1, num_points, input_dim)).expand((B, T, num_points, self.cnf_args.input_dim))
-            y = y.reshape((B*T, num_points, input_dim))
+            y = y.reshape((B * T, num_points, input_dim))
 
-        logp_y = standard_normal_logprob(y).view(B*T, num_points, -1).sum(2)
+        logp_y = standard_normal_logprob(y).view(B * T, num_points, -1).sum(2)
 
-        z = z.view((B*T, H))
+        z = z.view((B * T, H))
 
-        x = self.point_cnf(y, z, reverse=True) #.view(*y.size())
+        x = self.point_cnf(y, z, reverse=True)  # .view(*y.size())
         x = x.view((B, T, num_points, input_dim))
         y = y.view((B, T, num_points, input_dim))
         logp_y = logp_y.view((B, T, num_points))
-        
+
         return y, logp_y, x
 
-    def reconstruct(self, x, 
+    def reconstruct(self, x,
                     num_points=1024,
-                    constant_in_time=False, 
+                    constant_in_time=False,
                     timestamps=None,
                     max_timestamp=5.0,
                     truncate_std=None,
@@ -297,7 +298,7 @@ class CaSPR(nn.Module):
         z0, tnocs_pred = self.encode(x)
 
         if timestamps is None:
-            all_times = x[:,:,0,3] / max_timestamp
+            all_times = x[:, :, 0, 3] / max_timestamp
         else:
             all_times = timestamps.view((1, -1)).repeat((B, 1))
         # print(all_times)

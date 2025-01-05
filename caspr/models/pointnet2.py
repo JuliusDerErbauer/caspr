@@ -4,12 +4,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from kaolin.models.PointNet2 import separate_xyz_and_features, PointNet2GroupingLayer, furthest_point_sampling, fps_gather_by_index, three_nn, three_interpolate 
+from kaolin.models.PointNet2 import separate_xyz_and_features, PointNet2GroupingLayer, furthest_point_sampling, \
+    fps_gather_by_index, three_nn, three_interpolate
 
 import kaolin.cuda as ext
 import kaolin.cuda.furthest_point_sampling
 
-NUM_GROUPS = 16 # for group norm
+NUM_GROUPS = 16  # for group norm
+
 
 class PointNet2feat(nn.Module):
     """Modified PointNet++ segmentation network to give per-point features.
@@ -147,7 +149,7 @@ class PointNet2feat(nn.Module):
 
         self.feature_propagators = nn.ModuleList()
 
-        layer_dims = [max([max_feat_prop_size, num_classes])]*2
+        layer_dims = [max([max_feat_prop_size, num_classes])] * 2
         self.feature_propagators.append(
             PointNet2FeaturePropagator(
                 num_features=self.set_abstractions[-2].get_num_features_out(),
@@ -157,7 +159,7 @@ class PointNet2feat(nn.Module):
             )
         )
 
-        layer_dims = [max([max_feat_prop_size, num_classes])]*2
+        layer_dims = [max([max_feat_prop_size, num_classes])] * 2
         self.feature_propagators.append(
             PointNet2FeaturePropagator(
                 num_features=self.set_abstractions[-3].get_num_features_out(),
@@ -168,7 +170,7 @@ class PointNet2feat(nn.Module):
             )
         )
 
-        layer_dims = [max([max_feat_prop_size // 2, num_classes])]*2
+        layer_dims = [max([max_feat_prop_size // 2, num_classes])] * 2
         self.feature_propagators.append(
             PointNet2FeaturePropagator(
                 num_features=self.set_abstractions[-4].get_num_features_out(),
@@ -179,7 +181,7 @@ class PointNet2feat(nn.Module):
             )
         )
 
-        layer_dims = [max([max_feat_prop_size // 2, num_classes])]*2
+        layer_dims = [max([max_feat_prop_size // 2, num_classes])] * 2
         self.feature_propagators.append(
             PointNet2FeaturePropagator(
                 num_features=self.set_abstractions[-5].get_num_features_out(),
@@ -190,7 +192,7 @@ class PointNet2feat(nn.Module):
             )
         )
 
-        layer_dims = [max([max_feat_prop_size // 4, num_classes])]*2
+        layer_dims = [max([max_feat_prop_size // 4, num_classes])] * 2
         self.feature_propagators.append(
             PointNet2FeaturePropagator(
                 num_features=in_features,
@@ -295,14 +297,14 @@ class PointNet2SetAbstraction(nn.Module):
     """
 
     def __init__(self,
-                num_points_out,
-                pointnet_in_features,
-                pointnet_layer_dims_list,
-                radii_list=None,
-                num_samples_list=None,
-                batchnorm=True,
-                use_xyz_feature=True,
-                use_random_ball_query=False):
+                 num_points_out,
+                 pointnet_in_features,
+                 pointnet_layer_dims_list,
+                 radii_list=None,
+                 num_samples_list=None,
+                 batchnorm=True,
+                 use_xyz_feature=True,
+                 use_random_ball_query=False):
 
         super(PointNet2SetAbstraction, self).__init__()
 
@@ -324,7 +326,7 @@ class PointNet2SetAbstraction(nn.Module):
         self.pointnet_modules = nn.ModuleList()
         self.layers = []
         self.pointnet_in_channels = pointnet_in_features + \
-            (3 if use_xyz_feature else 0)
+                                    (3 if use_xyz_feature else 0)
 
         num_scales = len(radii_list)
         for i in range(num_scales):
@@ -332,7 +334,8 @@ class PointNet2SetAbstraction(nn.Module):
             num_samples = num_samples_list[i]
             pointnet_layer_dims = pointnet_layer_dims_list[i]
 
-            assert isinstance(pointnet_layer_dims, list), 'Each pointnet_layer_dims must be a list, got {} instead'.format(
+            assert isinstance(pointnet_layer_dims,
+                              list), 'Each pointnet_layer_dims must be a list, got {} instead'.format(
                 pointnet_layer_dims)
             assert len(
                 pointnet_layer_dims) > 0, 'Each pointnet_layer_dims must have at least one element'
@@ -395,7 +398,7 @@ class PointNet2SetAbstraction(nn.Module):
 
             if self.num_points_out is not None:
                 new_features = new_features.view(-1,
-                                                self.pointnet_in_channels, num_samples)
+                                                 self.pointnet_in_channels, num_samples)
 
             # new_features = pointnet(new_features)
             new_features = self.pointnet_modules[i](new_features)
@@ -420,6 +423,7 @@ class PointNet2SetAbstraction(nn.Module):
 
     def get_num_features_out(self):
         return sum([lst[-1] for lst in self.pointnet_layer_dims_list])
+
 
 class PointNet2FeaturePropagator(nn.Module):
     """A single feature-propagation layer for the PointNet++ architecture.
@@ -606,11 +610,11 @@ class PointNetFeatureExtractor(nn.Module):
             if not isinstance(layer_dim, int):
                 raise TypeError('Elements of layer_dims must be of type int. '
                                 'Found type {0} at index {1}.'.format(
-                                    type(layer_dim), idx))
+                    type(layer_dim), idx))
         if not isinstance(global_feat, bool):
             raise TypeError('Argument global_feat expected to be of type '
                             'bool. Got {0} instead.'.format(
-                                type(global_feat)))
+                type(global_feat)))
 
         # Store feat_size as a class attribute
         self.feat_size = feat_size
@@ -686,13 +690,13 @@ class PointNetFeatureExtractor(nn.Module):
             x = self.activation(self.bn_layers[idx](
                 self.conv_layers[idx](x)))
             # else:
-                # x = self.activation(self.conv_layers[idx](x))
+            # x = self.activation(self.conv_layers[idx](x))
 
         # For the last layer, do not apply nonlinearity.
         # if self.batchnorm:
         x = self.bn_layers[-1](self.conv_layers[-1](x))
         # else:
-            # x = self.conv_layers[-1](x)
+        # x = self.conv_layers[-1](x)
 
         # Max pooling.
         x = torch.max(x, 2, keepdim=True)[0]

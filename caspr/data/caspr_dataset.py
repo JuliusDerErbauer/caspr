@@ -13,25 +13,32 @@ BAD_MODELS = ['93ce8e230939dfc230714334794526d4',
               '2307b51ca7e4a03d30714334794526d4']
 
 # raw world point cloud sequences will be given timestamps from 0 to this
-DEFAULT_MAX_TIMESTAMP = 5.0 
+DEFAULT_MAX_TIMESTAMP = 5.0
 # numbser of steps in each sequence
 DEFAULT_EXPECTED_SEQ_LEN = 10
 # number of points at each tep
 DEFAULT_EXPECTED_NUM_PTS = 4096
 
+
 class SplitLineParser(argparse.ArgumentParser):
     def convert_arg_line_to_args(self, arg_line):
         return arg_line.split()
 
+
 def parse_dataset_cfg(cfg_file_path):
     parser = SplitLineParser(fromfile_prefix_chars='@', allow_abbrev=False)
     parser.add_argument('--data', type=str, nargs='+', required=True, help='Paths to dataset roots e.g. ../data/cars')
-    parser.add_argument('--splits', type=str, nargs='+', default=None, help='Directory to optionally load data splits from e.g. ../data/splits/car_splits. Otherwise will split based on fractions given.')    
-    parser.add_argument('--max-timestamp', type=float, default=DEFAULT_MAX_TIMESTAMP, help='Max timestamp to label the data with')
-    parser.add_argument('--expected-num-pts', type=int, default=DEFAULT_EXPECTED_NUM_PTS, help='The expected number of points in each frame of the dataset to load in.')
-    parser.add_argument('--expected-seq-len', type=int, default=DEFAULT_EXPECTED_SEQ_LEN, help='The expected number of frames in each sequence.')
+    parser.add_argument('--splits', type=str, nargs='+', default=None,
+                        help='Directory to optionally load data splits from e.g. ../data/splits/car_splits. Otherwise will split based on fractions given.')
+    parser.add_argument('--max-timestamp', type=float, default=DEFAULT_MAX_TIMESTAMP,
+                        help='Max timestamp to label the data with')
+    parser.add_argument('--expected-num-pts', type=int, default=DEFAULT_EXPECTED_NUM_PTS,
+                        help='The expected number of points in each frame of the dataset to load in.')
+    parser.add_argument('--expected-seq-len', type=int, default=DEFAULT_EXPECTED_SEQ_LEN,
+                        help='The expected number of frames in each sequence.')
     args = parser.parse_args(['@' + cfg_file_path])
     return args
+
 
 def load_time_data(data_roots, split, train_frac, val_frac, splits_dirs=None, data_seq_len=DEFAULT_EXPECTED_SEQ_LEN):
     '''
@@ -73,7 +80,7 @@ def load_time_data(data_roots, split, train_frac, val_frac, splits_dirs=None, da
             print('NOTE: this is just for the single requested split.')
 
         all_model_ids = []
-        nocs_seq_paths = [] # all model lists
+        nocs_seq_paths = []  # all model lists
         for model_path in model_dirs:
             model_id = model_path.split('/')[-1]
             if cur_split_dir is not None and not os.path.exists(model_path):
@@ -82,7 +89,7 @@ def load_time_data(data_roots, split, train_frac, val_frac, splits_dirs=None, da
             if model_id in BAD_MODELS:
                 print('Skipping model %s, bad model...' % (model_id))
                 continue
-            cur_model_paths = [] # all the sequences for this model
+            cur_model_paths = []  # all the sequences for this model
             # go through each sequence
             seq_dirs = [os.path.join(model_path, f) for f in sorted(os.listdir(model_path)) if f[0] != '.']
             seq_dirs = [f for f in seq_dirs if os.path.isdir(f)]
@@ -100,7 +107,7 @@ def load_time_data(data_roots, split, train_frac, val_frac, splits_dirs=None, da
             nocs_seq_paths.append(cur_model_paths)
             all_model_ids.append(model_id)
         all_model_ids = np.array(all_model_ids)
-        
+
         print('Sequences are of length %d...' % (len(nocs_seq_paths[0][0])))
         print('Loading %s split...' % (split))
 
@@ -115,11 +122,11 @@ def load_time_data(data_roots, split, train_frac, val_frac, splits_dirs=None, da
                 print('Training and validation fraction must be less than 1.0!')
                 exit()
 
-            train_inds = np.arange(int(train_frac*num_models))
+            train_inds = np.arange(int(train_frac * num_models))
             # print(train_inds)
-            val_inds = np.arange(train_inds[-1]+1, train_inds[-1]+1 + int(val_frac*num_models))
+            val_inds = np.arange(train_inds[-1] + 1, train_inds[-1] + 1 + int(val_frac * num_models))
             # print(val_inds)
-            test_inds = np.arange(val_inds[-1]+1, num_models)
+            test_inds = np.arange(val_inds[-1] + 1, num_models)
             # print(test_inds)
 
             split_inds = train_inds
@@ -141,7 +148,6 @@ def load_time_data(data_roots, split, train_frac, val_frac, splits_dirs=None, da
 
     print('Split size (num seqs): %d' % (len(all_nocs_seq_paths)))
 
-
     return all_nocs_seq_paths
 
 
@@ -155,14 +161,14 @@ def load_seq_path(seq_path_list, max_timestamp=DEFAULT_MAX_TIMESTAMP, expected_n
     if seq_len == 1:
         step_size = 0.0
     else:
-        step_size = 1.0 / (seq_len-1)
+        step_size = 1.0 / (seq_len - 1)
 
     # print(seq_path_list)
 
     # load data for this sequence
-    nocs_seq = np.zeros((seq_len, expected_num_pts, 4)) # x,y,z,t
-    depth_seq = np.zeros((seq_len, expected_num_pts, 4)) # x,y,z,t
-    pose_seq = np.zeros((seq_len, 4, 4)) # 4x4 transformation matrices
+    nocs_seq = np.zeros((seq_len, expected_num_pts, 4))  # x,y,z,t
+    depth_seq = np.zeros((seq_len, expected_num_pts, 4))  # x,y,z,t
+    pose_seq = np.zeros((seq_len, 4, 4))  # 4x4 transformation matrices
     for step_idx, pc_file in enumerate(pc_seq_files):
         pc_data = np.load(pc_file)
         nocs_pc = pc_data['nocs_data']
@@ -174,7 +180,7 @@ def load_seq_path(seq_path_list, max_timestamp=DEFAULT_MAX_TIMESTAMP, expected_n
             # if we don't have any depth data, use NOCS point cloud as input
             depth_pc = nocs_pc
         if pose.size == 0:
-            pose = np.zeros((4,4))
+            pose = np.zeros((4, 4))
 
         # print(nocs_pc.shape)
         # print(depth_pc.shape)
@@ -190,18 +196,18 @@ def load_seq_path(seq_path_list, max_timestamp=DEFAULT_MAX_TIMESTAMP, expected_n
             # need to pad end to get the expected point cloud size
             pad_size = expected_num_pts - nocs_pc.shape[0]
             while pad_size > 0:
-                nocs_pc = np.concatenate([nocs_pc, nocs_pc[:pad_size].reshape((-1,3))], axis=0)
-                depth_pc = np.concatenate([depth_pc, depth_pc[:pad_size].reshape((-1,3))], axis=0)
+                nocs_pc = np.concatenate([nocs_pc, nocs_pc[:pad_size].reshape((-1, 3))], axis=0)
+                depth_pc = np.concatenate([depth_pc, depth_pc[:pad_size].reshape((-1, 3))], axis=0)
                 pad_size = expected_num_pts - nocs_pc.shape[0]
-        
+
         pose_seq[step_idx] = pose
 
         # add time stamp min 0, max 1 based on number of steps
-        time_stamp = np.ones((nocs_pc.shape[0], 1))*step_size*step_idx # NOCS time (0, 1)
+        time_stamp = np.ones((nocs_pc.shape[0], 1)) * step_size * step_idx  # NOCS time (0, 1)
         nocs_pc = np.concatenate([nocs_pc, time_stamp], axis=1)
         nocs_seq[step_idx] = nocs_pc
         # world time (0, max_time)
-        time_stamp = max_timestamp*np.ones((depth_pc.shape[0], 1))*step_size*step_idx
+        time_stamp = max_timestamp * np.ones((depth_pc.shape[0], 1)) * step_size * step_idx
         depth_pc = np.concatenate([depth_pc, time_stamp], axis=1)
         depth_seq[step_idx] = depth_pc
 
@@ -213,15 +219,15 @@ class DynamicPCLDataset(Dataset):
     Dataset of point cloud sequences
     '''
 
-    def __init__(self,  data_cfg, 
-                        split='train',
-                        train_frac=0.8, 
-                        val_frac=0.1, 
-                        num_pts=1024,
-                        seq_len=5,
-                        shift_time_to_zero=False,
-                        random_point_sample=True,
-                        random_point_sample_per_step=False):
+    def __init__(self, data_cfg,
+                 split='train',
+                 train_frac=0.8,
+                 val_frac=0.1,
+                 num_pts=1024,
+                 seq_len=5,
+                 shift_time_to_zero=False,
+                 random_point_sample=True,
+                 random_point_sample_per_step=False):
         '''
         - data_cfg                      : path to dataset configuration file
         - split                         : "train", "test", or "val"
@@ -254,7 +260,7 @@ class DynamicPCLDataset(Dataset):
 
         # optional data to return
         self.return_pose_data = False
-        self.return_first_steps = False # If true, returns the first seq_len steps in the sequence instead of random sampling
+        self.return_first_steps = False  # If true, returns the first seq_len steps in the sequence instead of random sampling
 
         if self.split not in ['train', 'test', 'val']:
             print('Split %s is not a valid option. Choose train, test, or val.' % (split))
@@ -263,12 +269,12 @@ class DynamicPCLDataset(Dataset):
         print('Expected sequence length is set to %d!!' % (self.data_seq_len))
 
         # gets the file path to all sequences to load for this split
-        self.seq_data_paths = load_time_data(self.data_paths, 
-                                            self.split, 
-                                            self.train_frac,
-                                            self.val_frac,
-                                            self.split_paths,
-                                            data_seq_len=self.data_seq_len)
+        self.seq_data_paths = load_time_data(self.data_paths,
+                                             self.split,
+                                             self.train_frac,
+                                             self.val_frac,
+                                             self.split_paths,
+                                             data_seq_len=self.data_seq_len)
         self.data_len = len(self.seq_data_paths)
 
     def __len__(self):
@@ -284,9 +290,9 @@ class DynamicPCLDataset(Dataset):
         # load in the data
         model_id = self.seq_data_paths[idx][0].split('/')[-3]
         seq_id = self.seq_data_paths[idx][0].split('/')[-2]
-        all_data = load_seq_path(self.seq_data_paths[idx], 
-                                max_timestamp=self.max_timestamp,
-                                expected_num_pts=self.expected_num_pts)
+        all_data = load_seq_path(self.seq_data_paths[idx],
+                                 max_timestamp=self.max_timestamp,
+                                 expected_num_pts=self.expected_num_pts)
         full_nocs_seq, full_depth_seq, full_pose_seq = all_data
 
         # randomly subsample time steps to get the desired sequence length
@@ -294,38 +300,39 @@ class DynamicPCLDataset(Dataset):
             sampled_steps = np.arange(self.seq_len)
         else:
             sampled_steps = np.random.choice(full_nocs_seq.shape[0], self.seq_len, replace=False)
-        
+
         sampled_steps = sorted(sampled_steps)
-                
+
         if self.random_point_sample or self.random_point_sample_per_step:
             # randomly subsample the same points
             if self.random_point_sample:
                 sampled_pts = np.random.choice(full_nocs_seq.shape[1], self.num_pts, replace=False)
             elif self.random_point_sample_per_step:
-                sampled_pts = [np.random.choice(full_nocs_seq.shape[1], self.num_pts, replace=False) for i in range(full_nocs_seq.shape[0])]
-                sampled_pts = np.stack(sampled_pts, axis=0)  
+                sampled_pts = [np.random.choice(full_nocs_seq.shape[1], self.num_pts, replace=False) for i in
+                               range(full_nocs_seq.shape[0])]
+                sampled_pts = np.stack(sampled_pts, axis=0)
         else:
             sampled_pts = np.arange(self.num_pts)
 
         # for TNOCS
         if not self.random_point_sample_per_step:
-            input_data = full_depth_seq[sampled_steps,:,:].copy()
-            input_data = input_data[:,sampled_pts,:]
-            output_data = full_nocs_seq[sampled_steps,:,:].copy()
-            output_data = output_data[:,sampled_pts,:]
+            input_data = full_depth_seq[sampled_steps, :, :].copy()
+            input_data = input_data[:, sampled_pts, :]
+            output_data = full_nocs_seq[sampled_steps, :, :].copy()
+            output_data = output_data[:, sampled_pts, :]
         else:
             time_inds = np.repeat(np.arange(sampled_pts.shape[0]), sampled_pts.shape[1])
             pt_inds = sampled_pts.reshape((-1))
 
-            input_data = full_depth_seq[sampled_steps,:,:].copy()
+            input_data = full_depth_seq[sampled_steps, :, :].copy()
             input_data = input_data[time_inds, pt_inds, :].reshape((sampled_pts.shape[0], sampled_pts.shape[1], -1))
-            output_data = full_nocs_seq[sampled_steps,:,:].copy()
-            output_data = output_data[time_inds,pt_inds,:].reshape((sampled_pts.shape[0], sampled_pts.shape[1], -1))
+            output_data = full_nocs_seq[sampled_steps, :, :].copy()
+            output_data = output_data[time_inds, pt_inds, :].reshape((sampled_pts.shape[0], sampled_pts.shape[1], -1))
 
         if self.shift_time_to_zero:
             # subtract out the min time from the timestamps so it starts at 0
-            input_data[:,:,-1] -= np.min(input_data[:,:,-1])
-            output_data[:,:,-1] -= np.min(output_data[:,:,-1])
+            input_data[:, :, -1] -= np.min(input_data[:, :, -1])
+            output_data[:, :, -1] -= np.min(output_data[:, :, -1])
 
         # to torch
         input_data = torch.from_numpy(input_data.astype(np.float32))

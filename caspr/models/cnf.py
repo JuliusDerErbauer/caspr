@@ -17,6 +17,7 @@ from .normalization import MovingBatchNorm1d as MBN
 
 __all__ = ["CNF", "SequentialFlow"]
 
+
 class SequentialFlow(nn.Module):
     """A generalized nn.Sequential container for normalizing flows."""
 
@@ -47,6 +48,7 @@ class SequentialFlow(nn.Module):
                 x, logpx = result
             return x, logpx
 
+
 class CNF(nn.Module):
     def __init__(self, odefunc, conditional=True, T=1.0, train_T=False,
                  solver='dopri5', atol=1e-5, rtol=1e-5, use_adjoint=True):
@@ -73,7 +75,6 @@ class CNF(nn.Module):
         else:
             _logpx = logpx
 
-
         if self.conditional:
             assert context is not None
             states = (x, _logpx, context)
@@ -87,11 +88,11 @@ class CNF(nn.Module):
         if integration_times is None:
             if self.train_T:
                 integration_times = torch.stack(
-                        [torch.tensor(0.0).to(x), self.sqrt_end_time * self.sqrt_end_time]
-                    ).to(x)
+                    [torch.tensor(0.0).to(x), self.sqrt_end_time * self.sqrt_end_time]
+                ).to(x)
             else:
                 integration_times = torch.tensor([0., self.T], requires_grad=False).to(x)
-            
+
         if reverse:
             integration_times = _flip(integration_times, 0)
 

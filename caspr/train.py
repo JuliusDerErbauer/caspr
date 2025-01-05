@@ -25,6 +25,7 @@ from utils.config_utils import get_general_options, get_train_options
 
 from data.caspr_dataset import DynamicPCLDataset
 
+
 def parse_args(args):
     parser = argparse.ArgumentParser(allow_abbrev=False)
 
@@ -35,6 +36,7 @@ def parse_args(args):
     flags = flags[0]
 
     return flags
+
 
 def train(flags):
     # General options
@@ -85,20 +87,20 @@ def train(flags):
 
     # load train and validation sets
     train_dataset = DynamicPCLDataset(data_cfg, split='train', train_frac=0.8, val_frac=0.1,
-                                num_pts=num_pts, seq_len=seq_len,
-                                shift_time_to_zero=(not pretrain_tnocs),
-                                random_point_sample=True)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, 
-                                num_workers=num_workers, pin_memory=True, drop_last=True,
-                                worker_init_fn=lambda _: np.random.seed()) # get around numpy RNG seed bug
+                                      num_pts=num_pts, seq_len=seq_len,
+                                      shift_time_to_zero=(not pretrain_tnocs),
+                                      random_point_sample=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
+                              num_workers=num_workers, pin_memory=True, drop_last=True,
+                              worker_init_fn=lambda _: np.random.seed())  # get around numpy RNG seed bug
 
     val_dataset = DynamicPCLDataset(data_cfg, split='val', train_frac=0.8, val_frac=0.1,
-                                num_pts=num_pts, seq_len=seq_len,
-                                shift_time_to_zero=(not pretrain_tnocs),
-                                random_point_sample=False)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, 
-                                num_workers=num_workers, pin_memory=True, drop_last=True,
-                                    worker_init_fn=lambda _: np.random.seed())
+                                    num_pts=num_pts, seq_len=seq_len,
+                                    shift_time_to_zero=(not pretrain_tnocs),
+                                    random_point_sample=False)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False,
+                            num_workers=num_workers, pin_memory=True, drop_last=True,
+                            worker_init_fn=lambda _: np.random.seed())
 
     if parallel_train:
         log(log_out, 'Attempting to use all available GPUs for parallel training...')
@@ -107,16 +109,16 @@ def train(flags):
 
     # create caspr model
     model = CaSPR(radii_list=radii_list,
-                    local_feat_size=local_feat_size,
-                    latent_feat_size=latent_feat_size,
-                    ode_hidden_size=ode_hidden_size,
-                    pretrain_tnocs=pretrain_tnocs,
-                    augment_quad=augment_quad,
-                    augment_pairs=augment_pairs,
-                    cnf_blocks=cnf_blocks,
-                    motion_feat_size=motion_feat_size,
-                    regress_tnocs=regress_tnocs
-                    )
+                  local_feat_size=local_feat_size,
+                  latent_feat_size=latent_feat_size,
+                  ode_hidden_size=ode_hidden_size,
+                  pretrain_tnocs=pretrain_tnocs,
+                  augment_quad=augment_quad,
+                  augment_pairs=augment_pairs,
+                  cnf_blocks=cnf_blocks,
+                  motion_feat_size=motion_feat_size,
+                  regress_tnocs=regress_tnocs
+                  )
 
     if pretrain_tnocs and model_in_path != '':
         # load in only pretrained tnocs weights
@@ -133,29 +135,29 @@ def train(flags):
     model.to(device)
 
     optimizer = optim.Adam(model.parameters(),
-                            lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
+                           lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
 
-    params =  count_params(model)
+    params = count_params(model)
     log(log_out, 'Num model params: ' + str(params))
 
     loss_tracker = TrainLossTracker()
 
     for epoch in range(num_epochs):
         # train
-        run_one_epoch(model, train_loader, device, optimizer, 
-                        cnf_loss_weight, tnocs_loss_weight, 
-                        epoch, loss_tracker, log_out,
-                        mode='train', print_stats_every=print_stats_every)
+        run_one_epoch(model, train_loader, device, optimizer,
+                      cnf_loss_weight, tnocs_loss_weight,
+                      epoch, loss_tracker, log_out,
+                      mode='train', print_stats_every=print_stats_every)
 
         # validate
         if epoch % val_every == 0:
-            with torch.no_grad(): # must do this to avoid running out of memory
+            with torch.no_grad():  # must do this to avoid running out of memory
                 val_stat_tracker = TestStatTracker()
 
                 run_one_epoch(model, val_loader, device, None,
-                                cnf_loss_weight, tnocs_loss_weight, 
-                                epoch, val_stat_tracker, log_out,
-                                mode='val', print_stats_every=print_stats_every)
+                              cnf_loss_weight, tnocs_loss_weight,
+                              epoch, val_stat_tracker, log_out,
+                              mode='val', print_stats_every=print_stats_every)
 
                 # get final aggregate stats
                 mean_losses = val_stat_tracker.get_mean_stats()
@@ -170,7 +172,7 @@ def train(flags):
 
                     # record loss curve and print stats
                     loss_tracker.record_val_step(total_loss_out, epoch * len(train_loader))
-                    print_stats(log_out, epoch, 0, 0, total_loss_out, mean_cnf_err, 
+                    print_stats(log_out, epoch, 0, 0, total_loss_out, mean_cnf_err,
                                 mean_tnocs_pos_err, mean_tnocs_time_err,
                                 'VAL', mean_nfe)
 
@@ -189,10 +191,12 @@ def train(flags):
             save_file = os.path.join(model_out_path, save_name)
             torch.save(model.state_dict(), save_file)
 
+
 def main(flags):
     train(flags)
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     flags = parse_args(sys.argv[1:])
     # print(flags)
     main(flags)

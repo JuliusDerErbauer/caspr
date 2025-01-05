@@ -5,7 +5,7 @@ This script can be used to visualize CaSPR model results. Use:
 python viz.py --help
 
 '''
-import os, sys
+import sys, os
 import argparse
 
 import numpy as np
@@ -21,6 +21,7 @@ from utils.config_utils import get_general_options, get_viz_options
 
 from data.caspr_dataset import DynamicPCLDataset
 
+
 def parse_args(args):
     parser = argparse.ArgumentParser(allow_abbrev=False)
 
@@ -31,6 +32,7 @@ def parse_args(args):
     flags = flags[0]
 
     return flags
+
 
 def viz(flags):
     # General options
@@ -68,16 +70,16 @@ def viz(flags):
 
     # create caspr model
     model = CaSPR(radii_list=radii_list,
-                    local_feat_size=local_feat_size,
-                    latent_feat_size=latent_feat_size,
-                    ode_hidden_size=ode_hidden_size,
-                    pretrain_tnocs=pretrain_tnocs,
-                    augment_quad=augment_quad,
-                    augment_pairs=augment_pairs,
-                    cnf_blocks=cnf_blocks,
-                    motion_feat_size=motion_feat_size,
-                    regress_tnocs=regress_tnocs
-                    )
+                  local_feat_size=local_feat_size,
+                  latent_feat_size=latent_feat_size,
+                  ode_hidden_size=ode_hidden_size,
+                  pretrain_tnocs=pretrain_tnocs,
+                  augment_quad=augment_quad,
+                  augment_pairs=augment_pairs,
+                  cnf_blocks=cnf_blocks,
+                  motion_feat_size=motion_feat_size,
+                  regress_tnocs=regress_tnocs
+                  )
 
     if pretrain_tnocs and model_in_path != '':
         # load in only pretrained tnocs weights
@@ -90,24 +92,26 @@ def viz(flags):
         load_weights(model, loaded_state_dict)
 
     model.to(device)
-    
+
     # visualize results on test set
     test_dataset = DynamicPCLDataset(data_cfg, split='test', train_frac=0.8, val_frac=0.1,
-                                    num_pts=num_pts, seq_len=seq_len,
-                                    shift_time_to_zero=(not pretrain_tnocs),
-                                    random_point_sample=False)
+                                     num_pts=num_pts, seq_len=seq_len,
+                                     shift_time_to_zero=(not pretrain_tnocs),
+                                     random_point_sample=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle_test, num_workers=num_workers,
-                                    worker_init_fn=lambda _: np.random.seed()) # get around numpy RNG seed bug
+                             worker_init_fn=lambda _: np.random.seed())  # get around numpy RNG seed bug
 
     # visualize predictions
     viz_cfg = VizConfig(flags)
     with torch.no_grad():
         test_viz(viz_cfg, model, test_dataset, test_loader, device)
 
+
 def main(flags):
     train(flags)
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     flags = parse_args(sys.argv[1:])
     print(flags)
     viz(flags)

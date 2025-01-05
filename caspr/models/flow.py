@@ -7,6 +7,7 @@ from .normalization import MovingBatchNorm1d
 from .cnf import CNF, SequentialFlow
 from .latent_ode_model import LatentODE
 
+
 def count_nfe(model):
     class AccNumEvals(object):
 
@@ -70,7 +71,7 @@ def build_model(args, input_dim, hidden_dims, context_dim, num_blocks, condition
         bn_chain = [MovingBatchNorm1d(input_dim)]
         chain = bn_chain + chain
         chain += [MovingBatchNorm1d(input_dim)]
-        
+
     model = SequentialFlow(chain, use_bn=args.batch_norm)
 
     return model
@@ -85,16 +86,16 @@ def get_point_cnf(args):
 
 class PointCNFArgs():
     def __init__(self):
-        self.input_dim = 3 # Number of input dimensions (3 for 3D point clouds)
-        self.dims = "512-512-512" # hidden dims of ode net (will be this many +1 (input layer))
-        self.zdim = 512 # Dimension of the shape code
-        self.num_blocks = 1 # Number of stacked CNFs
-        self.layer_type = 'concatsquash' # type of layer to use in ode func
-        self.nonlinearity = 'softplus' # nonlinearity in ode func
-        self.time_length = 0.5 # if not training final time of flow, what to use
-        self.train_T = True # whether to train time of ending flow
-        self.solver = 'dopri5' # ODE solver to use
-        self.use_adjoint = True # use adjoint method
-        self.atol = 1e-5 # solver tolerences
+        self.input_dim = 3  # Number of input dimensions (3 for 3D point clouds)
+        self.dims = "512-512-512"  # hidden dims of ode net (will be this many +1 (input layer))
+        self.zdim = 512  # Dimension of the shape code
+        self.num_blocks = 1  # Number of stacked CNFs
+        self.layer_type = 'concatsquash'  # type of layer to use in ode func
+        self.nonlinearity = 'softplus'  # nonlinearity in ode func
+        self.time_length = 0.5  # if not training final time of flow, what to use
+        self.train_T = True  # whether to train time of ending flow
+        self.solver = 'dopri5'  # ODE solver to use
+        self.use_adjoint = True  # use adjoint method
+        self.atol = 1e-5  # solver tolerences
         self.rtol = 1e-5
-        self.batch_norm = True # whether to use moving batch norm
+        self.batch_norm = True  # whether to use moving batch norm

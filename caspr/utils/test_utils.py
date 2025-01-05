@@ -1,5 +1,6 @@
 import numpy as np
 
+
 #
 # testing helper functions
 #
@@ -9,6 +10,7 @@ class TestStatTracker():
     Tracks statistics of interest while running inference on the
     validation or test sets
     '''
+
     def __init__(self):
         self.loss_sum = 0.0
         self.total_loss_count = 0
@@ -33,7 +35,7 @@ class TestStatTracker():
         self.total_loss_count += 1
 
         self.cnf_err_sum += np.sum(cnf_err)
-        self.cnf_err_count += cnf_err.shape[0]*cnf_err.shape[1]*cnf_err.shape[2]
+        self.cnf_err_count += cnf_err.shape[0] * cnf_err.shape[1] * cnf_err.shape[2]
 
         self.tnocs_pos_err_sum += np.sum(tnocs_pos_err)
         self.tnocs_pos_err_count += tnocs_pos_err.shape[0]

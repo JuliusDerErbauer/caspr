@@ -29,20 +29,22 @@ from EaselModule import EaselModule
 from Easel import Easel
 import OpenGL.GL as gl
 
+
 class CloseEasel(Easel):
-     def closeEvent(self, event):
+    def closeEvent(self, event):
         self.stop()
         for Mod in self.Modules:
             Mod.__del__()
 
+
 class PCLViewer(EaselModule):
-    def __init__(self, pcl_seq, 
-                rgb_seq=None, 
-                cameras=None,
-                fps=60,
-                autoplay=True,
-                draw_cubes=True,
-                out_path=None):
+    def __init__(self, pcl_seq,
+                 rgb_seq=None,
+                 cameras=None,
+                 fps=60,
+                 autoplay=True,
+                 draw_cubes=True,
+                 out_path=None):
         '''
         - N point cloud sequences of the same length of steps (can have different number of points) : list of lists [[np.array(N x 3)]]
         - N rgb color sequences (optional) : list of lists [[np.array(N x 3)]]
@@ -73,7 +75,7 @@ class PCLViewer(EaselModule):
         self.fps = fps
         self.autoplay = autoplay
         self.draw_all = False
-        self.take_ss = False # whether we're currently taking a screenshot
+        self.take_ss = False  # whether we're currently taking a screenshot
         self.ss_ctr = 0
         self.out_path = out_path
         if self.out_path is None:
@@ -89,13 +91,12 @@ class PCLViewer(EaselModule):
             for extrins_list in cameras:
                 cur_extrins = []
                 for T in extrins_list:
-                    extrins = ds.CameraExtrinsics(rotation=T[:3,:3].T, translation=T[:3,3])
+                    extrins = ds.CameraExtrinsics(rotation=T[:3, :3].T, translation=T[:3, 3])
                     # print(extrins)
                     cur_extrins.append(ds.Camera(Extrinsics=extrins))
                 self.cameras.append(cur_extrins)
 
         print('Viz sequence of length: ' + str(self.seq_len))
-
 
     def init(self, argv=None):
         # create point sets for each frame of each sequence
@@ -107,7 +108,7 @@ class PCLViewer(EaselModule):
                 cur_rgb = None
                 if self.rgb_seq is not None and self.rgb_seq[seq_idx] is not None:
                     cur_rgb = self.rgb_seq[seq_idx][frame_idx]
-            
+
                 cur_pts = ds.PointSet3D()
                 # print(cur_pcl.shape)
                 if cur_pcl.shape[0] > 0:
@@ -118,7 +119,6 @@ class PCLViewer(EaselModule):
                         cur_pts.Colors = np.zeros_like(cur_pts.Points, dtype=np.float)
                 cur_pts.update()
                 self.pt_set_seq[-1].append(cur_pts)
-
 
     def step(self):
         if not self.need_update_step:
@@ -134,7 +134,7 @@ class PCLViewer(EaselModule):
         ElapsedTime = (endTime - startTime)
 
         if self.autoplay:
-            desired_step_time = (1.0 / self.fps)*1e6
+            desired_step_time = (1.0 / self.fps) * 1e6
             if ElapsedTime < desired_step_time:
                 sleep((desired_step_time - ElapsedTime) / 1e6)
 
@@ -182,7 +182,7 @@ class PCLViewer(EaselModule):
         if self.draw_all:
             for frame_idx in range(self.num_frames_per_seq):
                 for seq_idx in range(self.num_seq):
-                        self.pt_set_seq[seq_idx][frame_idx].draw(self.PointSize)
+                    self.pt_set_seq[seq_idx][frame_idx].draw(self.PointSize)
         else:
             if self.cur_seq == self.num_seq:
                 for seq_idx in range(self.num_seq):
@@ -196,14 +196,15 @@ class PCLViewer(EaselModule):
                 draw_frames = range(self.num_frames_per_seq)
             for cam_frame_idx in draw_frames:
                 for cam_idx in range(len(self.cameras)):
-                    self.cameras[cam_idx][cam_frame_idx].draw(Color=self.cam_colors[cam_idx % len(self.cam_colors)], 
+                    self.cameras[cam_idx][cam_frame_idx].draw(Color=self.cam_colors[cam_idx % len(self.cam_colors)],
                                                               CubeSide=-0.2, isDrawDir=True, Length=0.3)
 
             # draw cam traj
             for cam_idx in range(len(self.cameras)):
-                for cam_frame_idx in range(len(self.cameras[cam_idx])-1):
-                    self.drawLine(self.cameras[cam_idx][cam_frame_idx].Extrinsics.Translation, self.cameras[cam_idx][cam_frame_idx+1].Extrinsics.Translation, \
-                            Color=self.cam_colors[cam_idx % len(self.cam_colors)], LineWidth=1.0)
+                for cam_frame_idx in range(len(self.cameras[cam_idx]) - 1):
+                    self.drawLine(self.cameras[cam_idx][cam_frame_idx].Extrinsics.Translation,
+                                  self.cameras[cam_idx][cam_frame_idx + 1].Extrinsics.Translation, \
+                                  Color=self.cam_colors[cam_idx % len(self.cam_colors)], LineWidth=1.0)
 
         gl.glPopMatrix()
 
@@ -217,7 +218,7 @@ class PCLViewer(EaselModule):
             SS = np.reshape(SS, (height, width, 4))
             SS = cv2.flip(SS, 0)
             SS = cv2.cvtColor(SS, cv2.COLOR_BGRA2RGBA)
-            ss_out_path = os.path.join(self.out_path,'screenshot_' + str(self.ss_ctr).zfill(6) + '.png' )
+            ss_out_path = os.path.join(self.out_path, 'screenshot_' + str(self.ss_ctr).zfill(6) + '.png')
             cv2.imwrite(ss_out_path, SS)
             self.ss_ctr = self.ss_ctr + 1
             self.take_ss = False
@@ -241,7 +242,7 @@ class PCLViewer(EaselModule):
             self.need_update_step = True
             self.step()
 
-        if a0.key() == QtCore.Qt.Key_T: # toggle which sequence is showing
+        if a0.key() == QtCore.Qt.Key_T:  # toggle which sequence is showing
             self.cur_seq += 1
             self.cur_seq %= self.num_display
 
@@ -249,7 +250,7 @@ class PCLViewer(EaselModule):
             self.autoplay = not self.autoplay
             self.need_update_step = self.autoplay
 
-        if a0.key() == QtCore.Qt.Key_A: # show all frames at once
+        if a0.key() == QtCore.Qt.Key_A:  # show all frames at once
             self.draw_all = not self.draw_all
 
         if a0.key() == QtCore.Qt.Key_S:
@@ -258,8 +259,8 @@ class PCLViewer(EaselModule):
             self.take_ss = True
 
 
-def viz_pcl_seq(pcl_seq, 
-                rgb_seq=None, 
+def viz_pcl_seq(pcl_seq,
+                rgb_seq=None,
                 fps=60,
                 autoplay=True,
                 cameras=None,
@@ -281,9 +282,9 @@ def viz_pcl_seq(pcl_seq,
     - out_path : path to save screenshots to (by default saves to '.')
     '''
     app = QApplication([''])
-    view = PCLViewer(pcl_seq, rgb_seq=rgb_seq, cameras=cameras, fps=fps, 
-                              autoplay=autoplay, draw_cubes=draw_cubes, 
-                              out_path=out_path)
+    view = PCLViewer(pcl_seq, rgb_seq=rgb_seq, cameras=cameras, fps=fps,
+                     autoplay=autoplay, draw_cubes=draw_cubes,
+                     out_path=out_path)
     mainWindow = CloseEasel([view])
     mainWindow.isUpdateEveryStep = autoplay
     mainWindow.show()

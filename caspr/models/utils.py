@@ -7,9 +7,11 @@ from math import log, pi
 import torch
 import numpy as np
 
+
 def standard_normal_logprob(z):
     log_z = -0.5 * log(2 * pi)
     return log_z - z.pow(2) / 2
+
 
 # Taken from https://discuss.pytorch.org/t/implementing-truncated-normal-initializer/4778/15
 def truncated_normal(tensor, mean=0, std=1, trunc_std=2):
@@ -20,6 +22,7 @@ def truncated_normal(tensor, mean=0, std=1, trunc_std=2):
     tensor.data.copy_(tmp.gather(-1, ind).squeeze(-1))
     tensor.data.mul_(std).add_(mean)
     return tensor
+
 
 def sample_gaussian(size, truncate_std=None, device=None):
     y = torch.randn(*size).float()

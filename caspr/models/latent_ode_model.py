@@ -8,16 +8,17 @@ import numpy as np
 
 from torchdiffeq import odeint_adjoint as odeint
 
+
 class LatentODE(nn.Module):
     ''' 
     Continuous ODE representation
     '''
 
-    def __init__(self, input_size=1024, 
-                       hidden_size=1024, 
-                       num_layers=2, 
-                       nonlinearity=nn.Tanh, 
-                       augment_size=0):
+    def __init__(self, input_size=1024,
+                 hidden_size=1024,
+                 num_layers=2,
+                 nonlinearity=nn.Tanh,
+                 augment_size=0):
         '''
         input_size : dimension of latent state
         hidden_size : size of hidden state to use within the dynamics net
@@ -33,7 +34,7 @@ class LatentODE(nn.Module):
         self.input_size = input_size
         self.augment_size = augment_size
         self.output_size = input_size + self.augment_size
-        self.ode_func = DynamicsNet(input_size=self.output_size, hidden_size=hidden_size, 
+        self.ode_func = DynamicsNet(input_size=self.output_size, hidden_size=hidden_size,
                                     num_layers=num_layers, nonlinearity=nonlinearity)
         self.solver = ODESolver(self.ode_func, method='dopri5', rtol=1e-3, atol=1e-4)
 
@@ -62,31 +63,31 @@ class LatentODE(nn.Module):
         if self.augment_size > 0:
             cur_device = z0.device
             augment_tens = torch.zeros(z0.size()[0], self.augment_size, dtype=z0.dtype).to(cur_device)
-            aug_z0 = torch.cat([z0, augment_tens], dim=1) # B x (H+A)
+            aug_z0 = torch.cat([z0, augment_tens], dim=1)  # B x (H+A)
 
         pred_z = self.solver(aug_z0, rel_t)
-        pred_z = pred_z.permute(1,0,2) # first dimension of returned pred_z is time so must permute        
+        pred_z = pred_z.permute(1, 0, 2)  # first dimension of returned pred_z is time so must permute
 
         return pred_z
 
     def num_evals(self):
-        return self.ode_func._num_evals.item()   
+        return self.ode_func._num_evals.item()
 
 
 class ODESolver(nn.Module):
-	def __init__(self, ode_func, method='dopri5', rtol=1e-4, atol=1e-5):
-		super(ODESolver, self).__init__()
+    def __init__(self, ode_func, method='dopri5', rtol=1e-4, atol=1e-5):
+        super(ODESolver, self).__init__()
 
-		self.method = method
-		self.ode_func = ode_func
-		self.rtol = rtol
-		self.atol = rtol
+        self.method = method
+        self.ode_func = ode_func
+        self.rtol = rtol
+        self.atol = rtol
 
-		if not isinstance(self.ode_func, nn.Module):
-			raise ValueError('ode_func is required to be an instance of nn.Module to use the adjoint method')
+        if not isinstance(self.ode_func, nn.Module):
+            raise ValueError('ode_func is required to be an instance of nn.Module to use the adjoint method')
 
-	def forward(self, z0, t):
-		'''
+    def forward(self, z0, t):
+        '''
         z0 - initial state, N-D tensor
         t - times to evaluate ODE at size T 1-D tensor. The initial time corresponding to z0
             should be the first element of this sequence and each time must be larger than 
@@ -95,8 +96,8 @@ class ODESolver(nn.Module):
 		Returns:
 		pred_z - latent state found by the solver, tensor T x N-D
         '''
-		pred_z = odeint(self.ode_func, z0, t, rtol=self.rtol, atol=self.atol, method=self.method)
-		return pred_z 
+        pred_z = odeint(self.ode_func, z0, t, rtol=self.rtol, atol=self.atol, method=self.method)
+        return pred_z
 
 
 class DynamicsNet(nn.Module):
@@ -124,7 +125,7 @@ class DynamicsNet(nn.Module):
 
         self.dynamics_net = self.build_net()
 
-        self.register_buffer("_num_evals", torch.tensor(0.)) # to work with dataparallel
+        self.register_buffer("_num_evals", torch.tensor(0.))  # to work with dataparallel
 
     def build_net(self):
         layers = [nn.Linear(self.input_size, self.hidden_size)]
@@ -134,7 +135,6 @@ class DynamicsNet(nn.Module):
         layers.append(self.nonlinearity())
         layers.append(nn.Linear(self.hidden_size, self.output_size))
         return nn.Sequential(*layers)
-
 
     def forward(self, t, z):
         '''
@@ -149,8 +149,9 @@ class DynamicsNet(nn.Module):
     def num_evals(self):
         return self._num_evals
 
-def init_network_weights(net, std = 0.1):
-	for m in net.modules():
-		if isinstance(m, nn.Linear):
-			nn.init.normal_(m.weight, mean=0, std=std)
-			nn.init.constant_(m.bias, val=0)
+
+def init_network_weights(net, std=0.1):
+    for m in net.modules():
+        if isinstance(m, nn.Linear):
+            nn.init.normal_(m.weight, mean=0, std=std)
+            nn.init.constant_(m.bias, val=0)

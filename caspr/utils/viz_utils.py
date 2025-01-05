@@ -15,6 +15,7 @@ SAMPLE_CONTOURS_RADII = [0.25, 0.5, 1.0, 1.5, 2.25, 3.0]
 PRED_OFFSET = [1.0, 0.0, 0.0]
 BASE_OFFSET = [2.5, 0.5, 0.5]
 
+
 class VizConfig():
     def __init__(self, flags):
         '''
@@ -40,24 +41,25 @@ class VizConfig():
         self.base_color_map = flags.base_color_map
         self.prob_color_map = flags.prob_color_map
 
+
 def test_viz(cfg,
-            model,
-            test_dataset,
-            test_loader,
-            device):
+             model,
+             test_dataset,
+             test_loader,
+             device):
     '''
     Visualize CaSPR results
     '''
 
-    from tk3dv.extern.chamfer import ChamferDistance # only import if we need it
+    from tk3dv.extern.chamfer import ChamferDistance  # only import if we need it
     chamfer_dist = ChamferDistance()
 
     model.eval()
     for i, data in enumerate(test_loader):
         print('Batch: %d / %d' % (i, len(test_loader)))
-        pcl_in, nocs_out = data[0] # world point cloud, corresponding nocs point cloud
-        pcl_in = pcl_in.to(device) # B x T x N x 4 (x,y,z,t)
-        nocs_out = nocs_out.to(device) # B x T x N x 4 (x,y,z,t)
+        pcl_in, nocs_out = data[0]  # world point cloud, corresponding nocs point cloud
+        pcl_in = pcl_in.to(device)  # B x T x N x 4 (x,y,z,t)
+        nocs_out = nocs_out.to(device)  # B x T x N x 4 (x,y,z,t)
 
         # print(nocs_out.size())
 
@@ -77,24 +79,25 @@ def test_viz(cfg,
         #
         pred_tnocs = None
         if cfg.viz_tnocs and not (cfg.viz_observed or cfg.viz_interpolated):
-            _, pred_tnocs = model.encode(pcl_in) 
-        else: # we need sampling predictions
-            samp_pcl, logprob_samp_pcl, pred_pcl, pred_tnocs  = model.reconstruct(pcl_in, 
-                                                                                num_points=cfg.num_sampled_pts,
-                                                                                constant_in_time=cfg.constant_in_time, 
-                                                                                max_timestamp=test_dataset.max_timestamp,
-                                                                                sample_contours=SAMPLE_CONTOURS_RADII if cfg.sample_contours else None)
+            _, pred_tnocs = model.encode(pcl_in)
+        else:  # we need sampling predictions
+            samp_pcl, logprob_samp_pcl, pred_pcl, pred_tnocs = model.reconstruct(pcl_in,
+                                                                                 num_points=cfg.num_sampled_pts,
+                                                                                 constant_in_time=cfg.constant_in_time,
+                                                                                 max_timestamp=test_dataset.max_timestamp,
+                                                                                 sample_contours=SAMPLE_CONTOURS_RADII if cfg.sample_contours else None)
         if cfg.viz_tnocs:
-            nocs_err = torch.norm(pred_tnocs[:,:,:,:3] - nocs_out[:,:,:,:3], dim=3).mean().to('cpu').item()
+            nocs_err = torch.norm(pred_tnocs[:, :, :, :3] - nocs_out[:, :, :, :3], dim=3).mean().to('cpu').item()
             print('Cur L2 nocs spatial error: %f' % (nocs_err))
-                
+
         if cfg.viz_observed or cfg.viz_interpolated:
             quant_num_pts = min([cfg.num_sampled_pts, N])
-            observed_tnocs_gt = nocs_out[:,:,:quant_num_pts,:3].view((B*T, quant_num_pts, 3)) # don't need time stamp for reconstruction
-            observed_reconstr = pred_pcl[:,:,:quant_num_pts,:].view((B*T, quant_num_pts, 3))
+            observed_tnocs_gt = nocs_out[:, :, :quant_num_pts, :3].view(
+                (B * T, quant_num_pts, 3))  # don't need time stamp for reconstruction
+            observed_reconstr = pred_pcl[:, :, :quant_num_pts, :].view((B * T, quant_num_pts, 3))
             mean_chamfer, cur_emd = eval_reconstr_frames(observed_reconstr, observed_tnocs_gt, chamfer_dist)
-            print('Cur Mean Chamfer: %f' % (np.mean(mean_chamfer)*1000))
-            print('Cur Mean EMD: %f' % (np.mean(cur_emd)*1000))
+            print('Cur Mean Chamfer: %f' % (np.mean(mean_chamfer) * 1000))
+            print('Cur Mean EMD: %f' % (np.mean(cur_emd) * 1000))
 
         #
         # Visualize
@@ -111,7 +114,7 @@ def test_viz(cfg,
         if cfg.show_input_seq:
             base_seq_to_viz.append(viz_pcl_in)
             base_rgb_to_viz.append(gt_nocs_rgb)
-        
+
         # TNOCS regression visualization
         if cfg.viz_tnocs:
             print('Visualizing TNOCS Regression Prediction...')
@@ -119,7 +122,8 @@ def test_viz(cfg,
 
             viz_pred_nocs = np_to_list(pred_nocs_np)
             if cfg.tnocs_error_map:
-                pred_nocs_rgb = [get_error_colors(viz_pred_nocs[idx], viz_gt_nocs[idx]) for idx in range(gt_nocs_np.shape[1])]
+                pred_nocs_rgb = [get_error_colors(viz_pred_nocs[idx], viz_gt_nocs[idx]) for idx in
+                                 range(gt_nocs_np.shape[1])]
             else:
                 pred_nocs_rgb = copy_pcl_list(viz_pred_nocs)
             # translate to be in predicted viz cube
@@ -134,14 +138,14 @@ def test_viz(cfg,
         if cfg.viz_observed:
             print('Visualizing CaSPR Observed Reconstruction Sampling...')
             viz_caspr_reconstruction(cfg, samp_pcl, logprob_samp_pcl, pred_pcl,
-                             base_seq_to_viz, base_rgb_to_viz, T)
+                                     base_seq_to_viz, base_rgb_to_viz, T)
 
         # Interpolated sampling visualization
         if cfg.viz_interpolated:
             print('Visualizing CaSPR Interpolated Reconstruction Sampling...')
             timstamps = torch.linspace(0.0, 1.0, cfg.num_sampled_steps).to(pcl_in)
             # rerun reconstruction on higher-res timestamps
-            samp_pcl, logprob_samp_pcl, pred_pcl, _ = model.reconstruct(pcl_in, 
+            samp_pcl, logprob_samp_pcl, pred_pcl, _ = model.reconstruct(pcl_in,
                                                                         timestamps=timstamps,
                                                                         num_points=cfg.num_sampled_pts,
                                                                         constant_in_time=cfg.constant_in_time,
@@ -159,9 +163,9 @@ def test_viz(cfg,
                     subsampled_times.append(gt_nocs_np[0, time_idx, 0, 3])
             # fill any extras
             while len(subsampled_gt_nocs) < cfg.num_sampled_steps:
-                subsampled_gt_nocs.append(gt_nocs_np[0, T-1, :, :3])
-                subsampled_pcl_in.append(pcl_in_np[0, T-1, :, :3])
-                subsampled_times.append(gt_nocs_np[0, T-1, 0, 3])
+                subsampled_gt_nocs.append(gt_nocs_np[0, T - 1, :, :3])
+                subsampled_pcl_in.append(pcl_in_np[0, T - 1, :, :3])
+                subsampled_times.append(gt_nocs_np[0, T - 1, 0, 3])
 
             viz_gt_nocs = subsampled_gt_nocs
             viz_pcl_in = subsampled_pcl_in
@@ -174,7 +178,8 @@ def test_viz(cfg,
                 cur_base_rgb_to_viz.append(gt_nocs_rgb)
 
             viz_caspr_reconstruction(cfg, samp_pcl, logprob_samp_pcl, pred_pcl,
-                             cur_base_seq_to_viz, cur_base_rgb_to_viz, cfg.num_sampled_steps)
+                                     cur_base_seq_to_viz, cur_base_rgb_to_viz, cfg.num_sampled_steps)
+
 
 def viz_caspr_reconstruction(cfg, samp_pcl, logprob_samp_pcl, pred_pcl,
                              base_seq_to_viz, base_rgb_to_viz, fps):
@@ -215,16 +220,19 @@ def viz_caspr_reconstruction(cfg, samp_pcl, logprob_samp_pcl, pred_pcl,
 
     viz_pcl_seq(seq_to_viz, rgb_seq=rgb_to_viz, fps=fps, autoplay=True, draw_cubes=cfg.show_nocs_cubes)
 
+
 #
 # Viz helper functions
 #
 
 def np_to_list(np_array):
     ''' Turns B x T x N x D np array into a list of Nx3 arrays for visualization. Uses batch 1. '''
-    return [np_array[0,i,:,:3] for i in range(np_array.shape[1])]
+    return [np_array[0, i, :, :3] for i in range(np_array.shape[1])]
+
 
 def copy_pcl_list(pcl_list):
     return [pcl_list[idx] for idx in range(len(pcl_list))]
+
 
 def shift_pcl_list(pcl_list, offset):
     '''
@@ -232,16 +240,18 @@ def shift_pcl_list(pcl_list, offset):
     '''
     return [pcl_list[idx] + np.array([offset]) for idx in range(len(pcl_list))]
 
+
 def get_error_colors(predicted, gt):
     worst_error = 0.07
     # color the predicted_nocs based on error
     pt_errors = np.linalg.norm(predicted - gt, axis=1)
     pt_colors = np.ones_like(predicted)
-    pt_colors[:,0] = np.minimum(1.0, pt_errors / worst_error)  # based on error
-    pt_colors[:,1] = 27.0 / 255.0
-    pt_colors[:,2] = 116.0 / 255.0
+    pt_colors[:, 0] = np.minimum(1.0, pt_errors / worst_error)  # based on error
+    pt_colors[:, 1] = 27.0 / 255.0
+    pt_colors[:, 2] = 116.0 / 255.0
 
     return pt_colors
+
 
 def get_logprob_colors(logprob_y, low_prob=2.0, high_prob=9.0):
     '''
@@ -253,13 +263,14 @@ def get_logprob_colors(logprob_y, low_prob=2.0, high_prob=9.0):
     low_prob = 0.0
     T, N = logprob_y.shape
     pt_colors = np.ones((T, N, 3))
-    pt_colors[:,:,0] = np.minimum(1.0, trans_logprob / high_prob)
-    pt_colors[:,:,1] = 27.0 / 255.0
-    pt_colors[:,:,2] = 116.0 / 255.0
+    pt_colors[:, :, 0] = np.minimum(1.0, trans_logprob / high_prob)
+    pt_colors[:, :, 1] = 27.0 / 255.0
+    pt_colors[:, :, 2] = 116.0 / 255.0
 
     logprob_colors = [pt_colors[idx] for idx in range(pt_colors.shape[0])]
 
     return logprob_colors
+
 
 def get_sphere_samp_colors(logprob_y):
     '''
@@ -277,8 +288,8 @@ def get_sphere_samp_colors(logprob_y):
     T, N = logprob_y.shape
     sorted_probs, inv_map = np.unique(logprob_y.round(decimals=4), return_inverse=True)
 
-    pt_colors = np.ones((T*N, 3))
-    pt_colors[:,:] = prob_colors[inv_map,:]
+    pt_colors = np.ones((T * N, 3))
+    pt_colors[:, :] = prob_colors[inv_map, :]
     pt_colors = pt_colors.reshape((T, N, 3))
 
     logprob_colors = [pt_colors[idx] for idx in range(pt_colors.shape[0])]

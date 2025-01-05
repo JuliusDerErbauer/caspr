@@ -27,8 +27,10 @@ def divergence_approx(f, y, e=None):
     assert approx_tr_dzdx.requires_grad, \
         "(failed to add node to graph) f=%s %s, y(rgrad)=%s, e_dzdx:%s, e:%s, e_dzdx_e:%s cnt:%s" \
         % (
-        f.size(), f.requires_grad, y.requires_grad, e_dzdx.requires_grad, e.requires_grad, e_dzdx_e.requires_grad, cnt)
+            f.size(), f.requires_grad, y.requires_grad, e_dzdx.requires_grad, e.requires_grad, e_dzdx_e.requires_grad,
+            cnt)
     return approx_tr_dzdx
+
 
 class Swish(nn.Module):
     def __init__(self):

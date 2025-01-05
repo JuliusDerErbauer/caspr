@@ -23,7 +23,7 @@ class MovingBatchNormNd(nn.Module):
         else:
             self.register_parameter('weight', None)
             self.register_parameter('bias', None)
-        
+
         self.register_buffer('running_mean', torch.zeros(num_features))
         self.register_buffer('running_var', torch.ones(num_features))
 
@@ -59,7 +59,7 @@ class MovingBatchNormNd(nn.Module):
     def _forward(self, x, logpx=None):
         used_mean = self.running_mean.clone().detach()
         used_var = self.running_var.clone().detach()
-        
+
         if self.training:
             self.update_running_mean(x)
 
@@ -76,7 +76,7 @@ class MovingBatchNormNd(nn.Module):
         if logpx is None:
             return y
         else:
-            log_out =  logpx - self._logdetgrad(x, used_var).sum(-1, keepdim=True)
+            log_out = logpx - self._logdetgrad(x, used_var).sum(-1, keepdim=True)
             return y, log_out
 
     def _reverse(self, y, logpy=None):
@@ -91,7 +91,7 @@ class MovingBatchNormNd(nn.Module):
             weight = self.weight.view(*self.shape).expand_as(y)
             bias = self.bias.view(*self.shape).expand_as(y)
             y = (y - bias) * torch.exp(-weight)
-        
+
         x = y * torch.exp(0.5 * torch.log(used_var + self.eps)) + used_mean
 
         if logpy is None:
@@ -121,7 +121,7 @@ class MovingBatchNorm1d(MovingBatchNormNd):
 
     def forward(self, x, context=None, logpx=None, integration_times=None, reverse=False):
         ret = super(MovingBatchNorm1d, self).forward(
-                x, context, logpx=logpx, reverse=reverse)
+            x, context, logpx=logpx, reverse=reverse)
         if logpx is None:
             return ret
 

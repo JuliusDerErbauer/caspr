@@ -26,6 +26,7 @@ from utils.config_utils import get_general_options, get_test_options
 
 from data.caspr_dataset import DynamicPCLDataset
 
+
 def parse_args(args):
     parser = argparse.ArgumentParser(allow_abbrev=False)
 
@@ -36,6 +37,7 @@ def parse_args(args):
     flags = flags[0]
 
     return flags
+
 
 def test(flags):
     # General options
@@ -85,16 +87,16 @@ def test(flags):
 
     # create caspr model
     model = CaSPR(radii_list=radii_list,
-                    local_feat_size=local_feat_size,
-                    latent_feat_size=latent_feat_size,
-                    ode_hidden_size=ode_hidden_size,
-                    pretrain_tnocs=pretrain_tnocs,
-                    augment_quad=augment_quad,
-                    augment_pairs=augment_pairs,
-                    cnf_blocks=cnf_blocks,
-                    motion_feat_size=motion_feat_size,
-                    regress_tnocs=regress_tnocs
-                    )
+                  local_feat_size=local_feat_size,
+                  latent_feat_size=latent_feat_size,
+                  ode_hidden_size=ode_hidden_size,
+                  pretrain_tnocs=pretrain_tnocs,
+                  augment_quad=augment_quad,
+                  augment_pairs=augment_pairs,
+                  cnf_blocks=cnf_blocks,
+                  motion_feat_size=motion_feat_size,
+                  regress_tnocs=regress_tnocs
+                  )
 
     if pretrain_tnocs and model_in_path != '':
         # load in only pretrained tnocs weights
@@ -107,14 +109,14 @@ def test(flags):
         load_weights(model, loaded_state_dict)
 
     model.to(device)
-    
+
     # then run on test set
     test_dataset = DynamicPCLDataset(data_cfg, split='test', train_frac=0.8, val_frac=0.1,
-                                    num_pts=num_pts, seq_len=seq_len,
-                                    shift_time_to_zero=(not pretrain_tnocs),
-                                    random_point_sample=False)
+                                     num_pts=num_pts, seq_len=seq_len,
+                                     shift_time_to_zero=(not pretrain_tnocs),
+                                     random_point_sample=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle_test, num_workers=num_workers,
-                                    worker_init_fn=lambda _: np.random.seed()) # get around numpy RNG seed bug
+                             worker_init_fn=lambda _: np.random.seed())  # get around numpy RNG seed bug
 
     log_out = os.path.join(model_out_path, test_log_out_name)
     log(log_out, flags)
@@ -125,16 +127,16 @@ def test(flags):
             test_stat_tracker = TestStatTracker()
 
             run_one_epoch(model, test_loader, device, None,
-                          cnf_loss_weight, tnocs_loss_weight, 
+                          cnf_loss_weight, tnocs_loss_weight,
                           0, test_stat_tracker, log_out,
                           mode='test', print_stats_every=1)
 
             # get final aggregate stats
             mean_losses = test_stat_tracker.get_mean_stats()
             total_loss_out, mean_cnf_err, mean_tnocs_pos_err, mean_tnocs_time_err, mean_nfe = mean_losses
-            
+
             # print stats
-            print_stats(log_out, 0, 0, 0, total_loss_out, mean_cnf_err, mean_tnocs_pos_err, 
+            print_stats(log_out, 0, 0, 0, total_loss_out, mean_cnf_err, mean_tnocs_pos_err,
                         mean_tnocs_time_err, 'TEST', mean_nfe)
 
     # other evaluations
@@ -142,7 +144,7 @@ def test(flags):
         if eval_shape_recon_observed:
             observed_steps = eval_utils.ALL_OBSERVED_STEPS
             unobserved_steps = eval_utils.ALL_UNOBSERVED_STEPS
-            test_shape_recon(model, 
+            test_shape_recon(model,
                              test_loader,
                              device,
                              log_out,
@@ -163,16 +165,18 @@ def test(flags):
                                   device,
                                   log_out)
         if eval_pose_observed_ransac:
-            test_observed_camera_pose_ransac(model, 
+            test_observed_camera_pose_ransac(model,
                                              test_loader,
                                              device,
                                              log_out,
                                              show=show_pose_viz)
 
+
 def main(flags):
     test(flags)
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     flags = parse_args(sys.argv[1:])
     # print(flags)
     main(flags)
