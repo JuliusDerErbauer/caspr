@@ -1,5 +1,5 @@
-numpy==1.26.4
+numpy==2.2.1
 open3d==0.18.0
-matplotlib==3.10
+matplotlib==3.10.0
 opencv-python==4.10.0.84
-ninja==1.9.0.post1
+ninja==1.11.1.3
